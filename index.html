@@ -159,6 +159,31 @@
     color: var(--marker);
     margin: 0 0 6px 0;
   }
+  .modal-body h3{
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14.5px;
+    margin: 0 0 2px 0;
+  }
+  .modal-body p{
+    margin: 0 0 0.6rem 0;
+  }
+  .modal-body p:last-child{
+    margin-bottom: 0;
+  }
+  .modal-body em{
+    font-family: 'JetBrains Mono', monospace;
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--marker);
+    display: inline-block;
+    margin-bottom: 2px;
+  }
+  .modal-body hr{
+    border: none;
+    border-top: 1px solid var(--wire-faint);
+    margin: 1.1rem 0;
+  }
   .modal-close{
     position: absolute;
     top: 1.25rem;
@@ -253,56 +278,17 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
 <script>
-const content = {
-  '|0>': {
-    eyebrow: 'education',
-    title: 'Education',
-    entries: [
-      { title: 'Ph.D., Computer Science', meta: 'NC State University', body: 'Dissertation on coherent crosstalk-induced errors on idle qubits in superconducting processors, using CER / PIE protocols and randomized compiling.' },
-      { title: 'NSF Graduate Research Fellowship', meta: 'GRFP', body: 'Awarded for research in quantum error characterization and suppression.' }
-    ]
-  },
-  '|1>': {
-    eyebrow: 'focus',
-    title: 'Current focus',
-    entries: [
-      { title: 'Quantum error characterization', meta: 'CER / PIE, randomized compiling', body: 'Validated on IBM Quantum hardware, achieving meaningful reductions in cluster separation for idle-qubit crosstalk.' },
-      { title: 'Software engineering', meta: 'quantum industry + general SWE', body: 'Actively applying research skills to production-grade software roles alongside quantum computing positions.' }
-    ]
-  },
-  '|+>': {
-    eyebrow: 'experience',
-    title: 'Experience',
-    entries: [
-      { title: 'Research Intern', meta: 'Oak Ridge National Laboratory', body: 'Built benchmarking infrastructure on the XACC framework for quantum circuit characterization.' },
-      { title: 'Chief Product Officer', meta: 'MotorGrid', body: 'Leading product for a scheduling platform built for auto repair shops.' }
-    ]
-  },
-  '|->': {
-    eyebrow: 'publications',
-    title: 'Publications',
-    entries: [
-      { title: 'Coherent crosstalk characterization and suppression', meta: 'in preparation, target: Quantum Science and Technology', body: 'Cluster-separation based validation of a compensating Z-rotation suppression method on IBM hardware.' },
-      { title: 'Five peer-reviewed publications', meta: 'various venues', body: 'Spanning quantum error characterization and quantum scattering simulation.' }
-    ]
-  },
-  '|i>': {
-    eyebrow: 'projects',
-    title: 'Side projects',
-    entries: [
-      { title: 'RogueScholar Studio', meta: 'freelance web development', body: 'Building web applications for clients outside the research world.' },
-      { title: 'SWU analytics toolkit', meta: 'Star Wars Unlimited', body: 'Regression-based cost curve analysis and hypergeometric draw probability tools for a trading card game.' }
-    ]
-  },
-  '|-i>': {
-    eyebrow: 'contact',
-    title: 'Get in touch',
-    entries: [
-      { title: 'Email', meta: 'hello@example.com', body: 'Open to conversations about quantum computing roles, software engineering, and interesting side projects.' }
-    ]
-  }
+const sectionMeta = {
+  '|0>':  { eyebrow: 'education',    title: 'Education',      file: 'content/education.md' },
+  '|1>':  { eyebrow: 'focus',        title: 'Current focus',  file: 'content/focus.md' },
+  '|+>':  { eyebrow: 'experience',   title: 'Experience',     file: 'content/experience.md' },
+  '|->':  { eyebrow: 'publications', title: 'Publications',   file: 'content/publications.md' },
+  '|i>':  { eyebrow: 'projects',     title: 'Side projects',  file: 'content/projects.md' },
+  '|-i>': { eyebrow: 'contact',      title: 'Get in touch',   file: 'content/contact.md' }
 };
+const contentCache = {};
 
 const container = document.getElementById('scene-container');
 const labelsLayer = document.getElementById('labels');
@@ -401,7 +387,7 @@ const quicknav = document.getElementById('quicknav');
 stateDefs.forEach(def => {
   const btn = document.createElement('button');
   btn.className = 'quicknav-item';
-  const title = content[def.key] ? content[def.key].title : '';
+  const title = sectionMeta[def.key] ? sectionMeta[def.key].title : '';
   btn.innerHTML = `<span class="title">${title}</span><span>${def.label}</span><span class="dot"></span>`;
   btn.addEventListener('click', () => navigateTo(def.key));
   quicknav.appendChild(btn);
@@ -589,19 +575,32 @@ const modalBody = document.getElementById('modal-body');
 const hint = document.getElementById('hint');
 
 function openModal(key){
-  const data = content[key];
-  if (!data) return;
-  modalEyebrow.textContent = data.eyebrow;
-  modalTitle.textContent = data.title;
-  modalBody.innerHTML = data.entries.map(e => `
-    <div class="entry">
-      <p class="entry-title">${e.title}</p>
-      <p class="entry-meta">${e.meta}</p>
-      <p style="margin:0;">${e.body}</p>
-    </div>
-  `).join('');
+  const meta = sectionMeta[key];
+  if (!meta) return;
+  modalEyebrow.textContent = meta.eyebrow;
+  modalTitle.textContent = meta.title;
   overlay.classList.add('open');
   hint.style.opacity = '0';
+
+  if (contentCache[key]){
+    modalBody.innerHTML = contentCache[key];
+    return;
+  }
+
+  modalBody.innerHTML = '<p style="margin:0;">Loading…</p>';
+  fetch(meta.file)
+    .then(res => {
+      if (!res.ok) throw new Error('not found');
+      return res.text();
+    })
+    .then(md => {
+      const html = marked.parse(md);
+      contentCache[key] = html;
+      modalBody.innerHTML = html;
+    })
+    .catch(() => {
+      modalBody.innerHTML = '<p style="margin:0;">Couldn\'t load this section. If you\'re viewing this file directly rather than through a server, markdown fetches won\'t work locally — try a local server or the live site.</p>';
+    });
 }
 function closeModal(){
   overlay.classList.remove('open');
