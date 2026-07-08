@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Zachary Parks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zachary Parks &middot; Quantum Computing Researcher</title>
+<meta name="description" content="Zachary Parks &mdash; quantum computing researcher and computer scientist. Education, research, publications, and projects.">
+<meta property="og:title" content="Zachary Parks &middot; Quantum Computing Researcher">
+<meta property="og:description" content="Quantum computing researcher and computer scientist. Education, research, publications, and projects.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -265,6 +271,23 @@
     max-width: 140px;
     opacity: 1;
   }
+
+  @media (max-width: 640px){
+    .header{ top: 1.25rem; left: 1.25rem; max-width: calc(100% - 2.5rem); }
+    .header h1{ font-size: 17px; }
+    .header p{ font-size: 11px; }
+    .quicknav{
+      top: auto;
+      bottom: 5.25rem;
+      left: 1.25rem;
+      right: 1.25rem;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .quicknav-item .title{ display: none; }
+    .hint{ bottom: 1.5rem; }
+  }
 </style>
 </head>
 <body>
@@ -283,7 +306,7 @@
 <div id="labels"></div>
 
 <div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
     <p class="modal-eyebrow" id="modal-eyebrow"></p>
     <h2 id="modal-title"></h2>
@@ -291,17 +314,9 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js" integrity="sha384-GeYpwgp5GkQmpZrq04tb+TdM3a4Qseb6szt1//UDCTMBnEn71dBrhgQwHMgNPcY4" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
-const sectionMeta = {
-  '|0>':  { eyebrow: 'live to learn',    title: 'Education',      file: 'content/education.md' },
-  '|1>':  { eyebrow: 'interesting topics',        title: 'Current focus',  file: 'content/focus.md' },
-  '|+>':  { eyebrow: 'experience',   title: 'Experience',     file: 'content/experience.md' },
-  '|->':  { eyebrow: 'scientific work', title: 'Publications',   file: 'content/publications.md' },
-  '|i>':  { eyebrow: 'projects',     title: 'Side projects',  file: 'content/projects.md' },
-  '|-i>': { eyebrow: 'contact',      title: 'Get in touch',   file: 'content/contact.md' }
-};
 const contentCache = {};
 
 const container = document.getElementById('scene-container');
@@ -355,17 +370,29 @@ sphereGroup.add(axisLine(new THREE.Vector3(1,0,0)));
 sphereGroup.add(axisLine(new THREE.Vector3(0,1,0)));
 sphereGroup.add(axisLine(new THREE.Vector3(0,0,1)));
 
-const stateDefs = [
-  { key: '|0>',  label: '|0⟩',  pos: new THREE.Vector3(0, 2, 0) },
-  { key: '|1>',  label: '|1⟩',  pos: new THREE.Vector3(0, -2, 0) },
-  { key: '|+>',  label: '|+⟩',  pos: new THREE.Vector3(2, 0, 0) },
-  { key: '|->',  label: '|−⟩',  pos: new THREE.Vector3(-2, 0, 0) },
-  { key: '|i>',  label: '|i⟩',  pos: new THREE.Vector3(0, 0, 2) },
-  { key: '|-i>', label: '|−i⟩', pos: new THREE.Vector3(0, 0, -2) }
+const states = [
+  { key: '|0>',  label: '|0⟩',  pos: new THREE.Vector3(0, 2, 0),
+    rotY: 0,            rotX: Math.PI / 2,
+    eyebrow: 'live to learn',      title: 'Education',      file: 'content/education.md' },
+  { key: '|1>',  label: '|1⟩',  pos: new THREE.Vector3(0, -2, 0),
+    rotY: 0,            rotX: -Math.PI / 2,
+    eyebrow: 'interesting topics', title: 'Current focus',  file: 'content/focus.md' },
+  { key: '|+>',  label: '|+⟩',  pos: new THREE.Vector3(2, 0, 0),
+    rotY: -Math.PI / 2, rotX: 0,
+    eyebrow: 'experience',         title: 'Experience',     file: 'content/experience.md' },
+  { key: '|->',  label: '|−⟩',  pos: new THREE.Vector3(-2, 0, 0),
+    rotY: Math.PI / 2,  rotX: 0,
+    eyebrow: 'scientific work',    title: 'Publications',   file: 'content/publications.md' },
+  { key: '|i>',  label: '|i⟩',  pos: new THREE.Vector3(0, 0, 2),
+    rotY: 0,            rotX: 0,
+    eyebrow: 'projects',           title: 'Side projects',  file: 'content/projects.md' },
+  { key: '|-i>', label: '|−i⟩', pos: new THREE.Vector3(0, 0, -2),
+    rotY: 0,            rotX: Math.PI,
+    eyebrow: 'contact',            title: 'Get in touch',   file: 'content/contact.md' }
 ];
 
 const markerGeo = new THREE.SphereGeometry(0.09, 16, 16);
-const markers = stateDefs.map(def => {
+const markers = states.map(def => {
   const mat = new THREE.MeshBasicMaterial({ color: 0x5eead4 });
   const mesh = new THREE.Mesh(markerGeo, mat);
   mesh.position.copy(def.pos);
@@ -388,21 +415,11 @@ const markers = stateDefs.map(def => {
 
 scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-const faceTargets = {
-  '|0>':  { rotY: 0,        rotX: Math.PI / 2 },
-  '|1>':  { rotY: 0,        rotX: -Math.PI / 2 },
-  '|+>':  { rotY: -Math.PI / 2, rotX: 0 },
-  '|->':  { rotY: Math.PI / 2,  rotX: 0 },
-  '|i>':  { rotY: 0,        rotX: 0 },
-  '|-i>': { rotY: 0,        rotX: Math.PI }
-};
-
 const quicknav = document.getElementById('quicknav');
-stateDefs.forEach(def => {
+states.forEach(def => {
   const btn = document.createElement('button');
   btn.className = 'quicknav-item';
-  const title = sectionMeta[def.key] ? sectionMeta[def.key].title : '';
-  btn.innerHTML = `<span class="title">${title}</span><span>${def.label}</span><span class="dot"></span>`;
+  btn.innerHTML = `<span class="title">${def.title}</span><span>${def.label}</span><span class="dot"></span>`;
   btn.addEventListener('click', () => navigateTo(def.key));
   quicknav.appendChild(btn);
 });
@@ -425,7 +442,7 @@ function shortestDelta(from, to){
 }
 
 function navigateTo(key){
-  const target = faceTargets[key];
+  const target = states.find(s => s.key === key);
   if (!target) return;
   isNavigating = true;
   hasDraggedRecently = false;
@@ -453,6 +470,7 @@ window.addEventListener('mouseup', () => {
   container.classList.remove('dragging');
 });
 window.addEventListener('mousemove', (e) => {
+  updatePointer(e.clientX, e.clientY);
   if (!isDragging) return;
   const dx = e.clientX - lastX;
   const dy = e.clientY - lastY;
@@ -489,10 +507,6 @@ function updatePointer(clientX, clientY){
   pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
   pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 }
-
-container.addEventListener('mousemove', (e) => {
-  updatePointer(e.clientX, e.clientY);
-});
 
 container.addEventListener('click', (e) => {
   if (Math.abs(velY) > 0.01 || Math.abs(velX) > 0.01) return;
@@ -596,7 +610,7 @@ function decorateLinks(){
 }
 
 function openModal(key){
-  const meta = sectionMeta[key];
+  const meta = states.find(s => s.key === key);
   if (!meta) return;
   modalEyebrow.textContent = meta.eyebrow;
   modalTitle.textContent = meta.title;
@@ -609,7 +623,7 @@ function openModal(key){
     return;
   }
 
-  modalBody.innerHTML = '<p style="margin:0;">Loading…</p>';
+  modalBody.innerHTML = '<p>Loading…</p>';
   fetch(meta.file, {cache: 'no-store'})
     .then(res => {
       if (!res.ok) throw new Error('not found');
@@ -622,7 +636,7 @@ function openModal(key){
       decorateLinks();
     })
     .catch(() => {
-      modalBody.innerHTML = '<p style="margin:0;">Couldn\'t load this section. If you\'re viewing this file directly rather than through a server, markdown fetches won\'t work locally — try a local server or the live site.</p>';
+      modalBody.innerHTML = '<p>Couldn\'t load this section. If you\'re viewing this file directly rather than through a server, markdown fetches won\'t work locally — try a local server or the live site.</p>';
     });
 }
 function closeModal(){
@@ -631,6 +645,9 @@ function closeModal(){
 }
 document.getElementById('modal-close').addEventListener('click', closeModal);
 overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+});
 </script>
 </body>
 </html>
