@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bloch Sphere Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b0f14;
+    --bg-raised: #111823;
+    --wire: #2a3f5f;
+    --wire-faint: #1a2636;
+    --marker: #5eead4;
+    --marker-active: #fbbf24;
+    --text-primary: #e7ecf3;
+    --text-secondary: #8593a8;
+    --border: #223247;
+  }
+  *{ box-sizing: border-box; }
+  html, body{
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+  }
+  #scene-container{
+    position: absolute;
+    inset: 0;
+    cursor: grab;
+  }
+  #scene-container.dragging{ cursor: grabbing; }
+  #scene-container canvas{ display: block; }
+
+  .header{
+    position: absolute;
+    top: 2.5rem;
+    left: 2.5rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .header h1{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    letter-spacing: 0.01em;
+  }
+  .header p{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+
+  .hint{
+    position: absolute;
+    bottom: 2.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    z-index: 5;
+    pointer-events: none;
+    text-align: center;
+    transition: opacity 0.2s ease;
+  }
+
+  .marker-label{
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: color 0.15s ease, opacity 0.15s ease;
+    white-space: nowrap;
+  }
+  .marker-label.hot{
+    color: var(--marker-active);
+    font-weight: 500;
+  }
+
+  .modal-overlay{
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 9, 13, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.open{
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal{
+    width: min(480px, 88vw);
+    max-height: 76vh;
+    overflow-y: auto;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem;
+    transform: translateY(8px);
+    transition: transform 0.2s ease;
+    position: relative;
+  }
+  .modal-overlay.open .modal{ transform: translateY(0); }
+
+  .modal-eyebrow{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--marker);
+    letter-spacing: 0.06em;
+    margin: 0 0 0.5rem 0;
+  }
+  .modal h2{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 1.25rem 0;
+  }
+  .modal-body{
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+  .modal-body .entry{
+    margin-bottom: 1.1rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--wire-faint);
+  }
+  .modal-body .entry:last-child{
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .modal-body .entry-title{
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14.5px;
+    margin: 0 0 2px 0;
+  }
+  .modal-body .entry-meta{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--marker);
+    margin: 0 0 6px 0;
+  }
+  .modal-close{
+    position: absolute;
+    top: 1.25rem;
+    right: 1.5rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .modal-close:hover{ color: var(--text-primary); }
+
+  .quicknav{
+    position: absolute;
+    top: 2.5rem;
+    right: 2.5rem;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .quicknav-item{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 3px 2px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    transition: color 0.15s ease;
+  }
+  .quicknav-item:hover, .quicknav-item:focus-visible{
+    color: var(--text-primary);
+    outline: none;
+  }
+  .quicknav-item .dot{
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--marker);
+    opacity: 0.5;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .quicknav-item:hover .dot{
+    opacity: 1;
+    background: var(--marker-active);
+  }
+  .quicknav-item .title{
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    color: var(--text-primary);
+    transition: max-width 0.2s ease, opacity 0.15s ease;
+  }
+  .quicknav-item:hover .title, .quicknav-item:focus-visible .title{
+    max-width: 140px;
+    opacity: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Nonya &middot; Quantum Researcher</h1>
+  <p>builder / perpetual side-quester</p>
+</div>
+
+<div id="scene-container"></div>
+
+<div class="quicknav" id="quicknav"></div>
+
+<div class="hint" id="hint">drag to rotate &nbsp;&middot;&nbsp; click a state to view</div>
+
+<div id="labels"></div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+    <p class="modal-eyebrow" id="modal-eyebrow"></p>
+    <h2 id="modal-title"></h2>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const content = {
+  '|0>': {
+    eyebrow: 'education',
+    title: 'Education',
+    entries: [
+      { title: 'Ph.D., Computer Science', meta: 'NC State University', body: 'Dissertation on coherent crosstalk-induced errors on idle qubits in superconducting processors, using CER / PIE protocols and randomized compiling.' },
+      { title: 'NSF Graduate Research Fellowship', meta: 'GRFP', body: 'Awarded for research in quantum error characterization and suppression.' }
+    ]
+  },
+  '|1>': {
+    eyebrow: 'focus',
+    title: 'Current focus',
+    entries: [
+      { title: 'Quantum error characterization', meta: 'CER / PIE, randomized compiling', body: 'Validated on IBM Quantum hardware, achieving meaningful reductions in cluster separation for idle-qubit crosstalk.' },
+      { title: 'Software engineering', meta: 'quantum industry + general SWE', body: 'Actively applying research skills to production-grade software roles alongside quantum computing positions.' }
+    ]
+  },
+  '|+>': {
+    eyebrow: 'experience',
+    title: 'Experience',
+    entries: [
+      { title: 'Research Intern', meta: 'Oak Ridge National Laboratory', body: 'Built benchmarking infrastructure on the XACC framework for quantum circuit characterization.' },
+      { title: 'Chief Product Officer', meta: 'MotorGrid', body: 'Leading product for a scheduling platform built for auto repair shops.' }
+    ]
+  },
+  '|->': {
+    eyebrow: 'publications',
+    title: 'Publications',
+    entries: [
+      { title: 'Coherent crosstalk characterization and suppression', meta: 'in preparation, target: Quantum Science and Technology', body: 'Cluster-separation based validation of a compensating Z-rotation suppression method on IBM hardware.' },
+      { title: 'Five peer-reviewed publications', meta: 'various venues', body: 'Spanning quantum error characterization and quantum scattering simulation.' }
+    ]
+  },
+  '|i>': {
+    eyebrow: 'projects',
+    title: 'Side projects',
+    entries: [
+      { title: 'RogueScholar Studio', meta: 'freelance web development', body: 'Building web applications for clients outside the research world.' },
+      { title: 'SWU analytics toolkit', meta: 'Star Wars Unlimited', body: 'Regression-based cost curve analysis and hypergeometric draw probability tools for a trading card game.' }
+    ]
+  },
+  '|-i>': {
+    eyebrow: 'contact',
+    title: 'Get in touch',
+    entries: [
+      { title: 'Email', meta: 'hello@example.com', body: 'Open to conversations about quantum computing roles, software engineering, and interesting side projects.' }
+    ]
+  }
+};
+
+const container = document.getElementById('scene-container');
+const labelsLayer = document.getElementById('labels');
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+camera.position.set(0, 0, 6.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(container.clientWidth, container.clientHeight);
+container.appendChild(renderer.domElement);
+
+const sphereGroup = new THREE.Group();
+scene.add(sphereGroup);
+
+const wireMat = new THREE.LineBasicMaterial({ color: 0x2a3f5f, transparent: true, opacity: 0.55 });
+const sphereGeo = new THREE.SphereGeometry(2, 24, 16);
+const wireGeo = new THREE.WireframeGeometry(sphereGeo);
+const wireSphere = new THREE.LineSegments(wireGeo, wireMat);
+sphereGroup.add(wireSphere);
+
+const solidMat = new THREE.MeshBasicMaterial({ color: 0x101820, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+const solidSphere = new THREE.Mesh(sphereGeo, solidMat);
+sphereGroup.add(solidSphere);
+
+function ringGeometry(axis){
+  const points = [];
+  for (let i = 0; i <= 64; i++){
+    const t = (i / 64) * Math.PI * 2;
+    let x=0,y=0,z=0;
+    if (axis === 'xy'){ x = Math.cos(t)*2.01; y = Math.sin(t)*2.01; }
+    if (axis === 'xz'){ x = Math.cos(t)*2.01; z = Math.sin(t)*2.01; }
+    if (axis === 'yz'){ y = Math.cos(t)*2.01; z = Math.sin(t)*2.01; }
+    points.push(new THREE.Vector3(x,y,z));
+  }
+  return new THREE.BufferGeometry().setFromPoints(points);
+}
+const ringMat = new THREE.LineBasicMaterial({ color: 0x3d5a80, transparent: true, opacity: 0.4 });
+['xy','xz','yz'].forEach(axis => {
+  sphereGroup.add(new THREE.Line(ringGeometry(axis), ringMat));
+});
+
+const axisMat = new THREE.LineBasicMaterial({ color: 0x445a75, transparent: true, opacity: 0.5 });
+function axisLine(dir){
+  const points = [ new THREE.Vector3(-dir.x*2.3,-dir.y*2.3,-dir.z*2.3), new THREE.Vector3(dir.x*2.3,dir.y*2.3,dir.z*2.3) ];
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), axisMat);
+}
+sphereGroup.add(axisLine(new THREE.Vector3(1,0,0)));
+sphereGroup.add(axisLine(new THREE.Vector3(0,1,0)));
+sphereGroup.add(axisLine(new THREE.Vector3(0,0,1)));
+
+const stateDefs = [
+  { key: '|0>',  label: '|0⟩',  pos: new THREE.Vector3(0, 2, 0) },
+  { key: '|1>',  label: '|1⟩',  pos: new THREE.Vector3(0, -2, 0) },
+  { key: '|+>',  label: '|+⟩',  pos: new THREE.Vector3(2, 0, 0) },
+  { key: '|->',  label: '|−⟩',  pos: new THREE.Vector3(-2, 0, 0) },
+  { key: '|i>',  label: '|i⟩',  pos: new THREE.Vector3(0, 0, 2) },
+  { key: '|-i>', label: '|−i⟩', pos: new THREE.Vector3(0, 0, -2) }
+];
+
+const markerGeo = new THREE.SphereGeometry(0.09, 16, 16);
+const markers = stateDefs.map(def => {
+  const mat = new THREE.MeshBasicMaterial({ color: 0x5eead4 });
+  const mesh = new THREE.Mesh(markerGeo, mat);
+  mesh.position.copy(def.pos);
+  mesh.userData = { key: def.key };
+  sphereGroup.add(mesh);
+
+  const haloGeo = new THREE.SphereGeometry(0.16, 16, 16);
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0x5eead4, transparent: true, opacity: 0.18 });
+  const halo = new THREE.Mesh(haloGeo, haloMat);
+  halo.position.copy(def.pos);
+  sphereGroup.add(halo);
+
+  const labelEl = document.createElement('div');
+  labelEl.className = 'marker-label';
+  labelEl.textContent = def.label;
+  labelsLayer.appendChild(labelEl);
+
+  return { def, mesh, halo, labelEl, hot: false };
+});
+
+scene.add(new THREE.AmbientLight(0xffffff, 1));
+
+const faceTargets = {
+  '|0>':  { rotY: 0,        rotX: Math.PI / 2 },
+  '|1>':  { rotY: 0,        rotX: -Math.PI / 2 },
+  '|+>':  { rotY: -Math.PI / 2, rotX: 0 },
+  '|->':  { rotY: Math.PI / 2,  rotX: 0 },
+  '|i>':  { rotY: 0,        rotX: 0 },
+  '|-i>': { rotY: 0,        rotX: Math.PI }
+};
+
+const quicknav = document.getElementById('quicknav');
+stateDefs.forEach(def => {
+  const btn = document.createElement('button');
+  btn.className = 'quicknav-item';
+  const title = content[def.key] ? content[def.key].title : '';
+  btn.innerHTML = `<span class="title">${title}</span><span>${def.label}</span><span class="dot"></span>`;
+  btn.addEventListener('click', () => navigateTo(def.key));
+  quicknav.appendChild(btn);
+});
+
+let rotY = 0.5, rotX = -0.2;
+let velY = 0.0022, velX = 0;
+let isDragging = false;
+let lastX = 0, lastY = 0;
+let hasDraggedRecently = false;
+let idleTimer = null;
+let isNavigating = false;
+let navTarget = null;
+let navPendingKey = null;
+
+function shortestDelta(from, to){
+  let d = (to - from) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+function navigateTo(key){
+  const target = faceTargets[key];
+  if (!target) return;
+  isNavigating = true;
+  hasDraggedRecently = false;
+  velY = 0; velX = 0;
+  navTarget = {
+    y: rotY + shortestDelta(rotY, target.rotY),
+    x: rotX + shortestDelta(rotX, target.rotX)
+  };
+  navPendingKey = key;
+}
+
+function setIdleResume(){
+  clearTimeout(idleTimer);
+  hasDraggedRecently = true;
+  idleTimer = setTimeout(() => { hasDraggedRecently = false; }, 1600);
+}
+
+container.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  container.classList.add('dragging');
+  lastX = e.clientX; lastY = e.clientY;
+});
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  container.classList.remove('dragging');
+});
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  velY = dx * 0.0045;
+  velX = dy * 0.0045;
+  rotY += velY;
+  rotX = Math.max(-1.3, Math.min(1.3, rotX + velX));
+  setIdleResume();
+});
+
+container.addEventListener('touchstart', (e) => {
+  isDragging = true;
+  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+}, { passive: true });
+window.addEventListener('touchend', () => { isDragging = false; });
+window.addEventListener('touchmove', (e) => {
+  if (!isDragging) return;
+  const dx = e.touches[0].clientX - lastX;
+  const dy = e.touches[0].clientY - lastY;
+  lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+  velY = dx * 0.0045;
+  velX = dy * 0.0045;
+  rotY += velY;
+  rotX = Math.max(-1.3, Math.min(1.3, rotX + velX));
+  setIdleResume();
+}, { passive: true });
+
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+
+function updatePointer(clientX, clientY){
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+container.addEventListener('mousemove', (e) => {
+  updatePointer(e.clientX, e.clientY);
+});
+
+container.addEventListener('click', (e) => {
+  if (Math.abs(velY) > 0.01 || Math.abs(velX) > 0.01) return;
+  updatePointer(e.clientX, e.clientY);
+  raycaster.setFromCamera(pointerNDC, camera);
+  const meshes = markers.map(m => m.mesh);
+  const hits = raycaster.intersectObjects(meshes);
+  if (hits.length > 0){
+    const key = hits[0].object.userData.key;
+    openModal(key);
+  }
+});
+
+function updateHover(){
+  raycaster.setFromCamera(pointerNDC, camera);
+  const meshes = markers.map(m => m.mesh);
+  const hits = raycaster.intersectObjects(meshes);
+  const newHover = hits.length > 0 ? hits[0].object.userData.key : null;
+  markers.forEach(m => {
+    const isHot = m.def.key === newHover;
+    m.hot = isHot;
+    m.mesh.material.color.set(isHot ? 0xfbbf24 : 0x5eead4);
+    m.halo.material.color.set(isHot ? 0xfbbf24 : 0x5eead4);
+    m.halo.scale.setScalar(isHot ? 1.6 : 1);
+    m.labelEl.classList.toggle('hot', isHot);
+  });
+  container.style.cursor = newHover ? 'pointer' : (isDragging ? 'grabbing' : 'grab');
+}
+
+function projectLabels(){
+  const rect = renderer.domElement.getBoundingClientRect();
+  markers.forEach(m => {
+    const worldPos = new THREE.Vector3();
+    m.mesh.getWorldPosition(worldPos);
+    const proj = worldPos.clone().project(camera);
+    const x = (proj.x * 0.5 + 0.5) * rect.width;
+    const y = (-proj.y * 0.5 + 0.5) * rect.height;
+    m.labelEl.style.left = (x) + 'px';
+    m.labelEl.style.top = (y - 22) + 'px';
+    m.labelEl.style.opacity = proj.z > 1 ? '0' : '1';
+  });
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  if (isNavigating){
+    rotY += (navTarget.y - rotY) * 0.09;
+    rotX += (navTarget.x - rotX) * 0.09;
+    if (Math.abs(navTarget.y - rotY) < 0.002 && Math.abs(navTarget.x - rotX) < 0.002){
+      rotY = navTarget.y;
+      rotX = navTarget.x;
+      isNavigating = false;
+      hasDraggedRecently = true;
+      setIdleResume();
+      if (navPendingKey){
+        openModal(navPendingKey);
+        navPendingKey = null;
+      }
+    }
+  } else if (!isDragging){
+    if (hasDraggedRecently){
+      velY *= 0.94;
+      velX *= 0.94;
+      rotY += velY;
+      rotX += velX;
+    } else {
+      velY += (0.0022 - velY) * 0.02;
+      velX += (0 - velX) * 0.02;
+      rotY += velY;
+      rotX += velX;
+    }
+  }
+
+  sphereGroup.rotation.y = rotY;
+  sphereGroup.rotation.x = rotX;
+
+  updateHover();
+  projectLabels();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+});
+
+const overlay = document.getElementById('modal-overlay');
+const modalEyebrow = document.getElementById('modal-eyebrow');
+const modalTitle = document.getElementById('modal-title');
+const modalBody = document.getElementById('modal-body');
+const hint = document.getElementById('hint');
+
+function openModal(key){
+  const data = content[key];
+  if (!data) return;
+  modalEyebrow.textContent = data.eyebrow;
+  modalTitle.textContent = data.title;
+  modalBody.innerHTML = data.entries.map(e => `
+    <div class="entry">
+      <p class="entry-title">${e.title}</p>
+      <p class="entry-meta">${e.meta}</p>
+      <p style="margin:0;">${e.body}</p>
+    </div>
+  `).join('');
+  overlay.classList.add('open');
+  hint.style.opacity = '0';
+}
+function closeModal(){
+  overlay.classList.remove('open');
+  hint.style.opacity = '1';
+}
+document.getElementById('modal-close').addEventListener('click', closeModal);
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+</script>
+</body>
+</html>
