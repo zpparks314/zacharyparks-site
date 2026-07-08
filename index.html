@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bloch Sphere Portfolio</title>
+<title>Zachary Parks</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -184,6 +185,19 @@
     border-top: 1px solid var(--wire-faint);
     margin: 1.1rem 0;
   }
+  .modal-body strong{
+    color: var(--marker-active);
+    font-weight: 500;
+  }
+  .modal-body h3 a{
+    color: var(--text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-body h3 a:hover{
+    color: var(--marker-active);
+    border-bottom-color: var(--marker-active);
+  }
   .modal-close{
     position: absolute;
     top: 1.25rem;
@@ -257,7 +271,7 @@
 
 <div class="header">
   <h1>Zachary Parks &middot; Quantum Computing Researcher</h1>
-  <p>Computer Scientist / Perpetual Learner</p>
+  <p>Computer Scientist / Lifelong Learner</p>
 </div>
 
 <div id="scene-container"></div>
@@ -281,10 +295,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
 <script>
 const sectionMeta = {
-  '|0>':  { eyebrow: 'education',    title: 'Education',      file: 'content/education.md' },
-  '|1>':  { eyebrow: 'focus',        title: 'Current focus',  file: 'content/focus.md' },
+  '|0>':  { eyebrow: 'live to learn',    title: 'Education',      file: 'content/education.md' },
+  '|1>':  { eyebrow: 'interesting topics',        title: 'Current focus',  file: 'content/focus.md' },
   '|+>':  { eyebrow: 'experience',   title: 'Experience',     file: 'content/experience.md' },
-  '|->':  { eyebrow: 'publications', title: 'Publications',   file: 'content/publications.md' },
+  '|->':  { eyebrow: 'scientific work', title: 'Publications',   file: 'content/publications.md' },
   '|i>':  { eyebrow: 'projects',     title: 'Side projects',  file: 'content/projects.md' },
   '|-i>': { eyebrow: 'contact',      title: 'Get in touch',   file: 'content/contact.md' }
 };
@@ -574,6 +588,13 @@ const modalTitle = document.getElementById('modal-title');
 const modalBody = document.getElementById('modal-body');
 const hint = document.getElementById('hint');
 
+function decorateLinks(){
+  modalBody.querySelectorAll('a').forEach(a => {
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+  });
+}
+
 function openModal(key){
   const meta = sectionMeta[key];
   if (!meta) return;
@@ -584,11 +605,12 @@ function openModal(key){
 
   if (contentCache[key]){
     modalBody.innerHTML = contentCache[key];
+    decorateLinks();
     return;
   }
 
   modalBody.innerHTML = '<p style="margin:0;">Loading…</p>';
-  fetch(meta.file)
+  fetch(meta.file, {cache: 'no-store'})
     .then(res => {
       if (!res.ok) throw new Error('not found');
       return res.text();
@@ -597,6 +619,7 @@ function openModal(key){
       const html = marked.parse(md);
       contentCache[key] = html;
       modalBody.innerHTML = html;
+      decorateLinks();
     })
     .catch(() => {
       modalBody.innerHTML = '<p style="margin:0;">Couldn\'t load this section. If you\'re viewing this file directly rather than through a server, markdown fetches won\'t work locally — try a local server or the live site.</p>';

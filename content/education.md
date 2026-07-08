@@ -5,7 +5,12 @@ Dissertation on coherent crosstalk-induced errors on idle qubits in superconduct
 
 ---
 
-### NSF Graduate Research Fellowship
-*GRFP*
+### B.S., Computer Science
+*University of North Carolina - Wilmington*
 
-Awarded for research in quantum error characterization and suppression.
+---
+
+### B.S., Chemistry
+*University of North Carolina - Wilmington*
+
+Honors research thesis on the quantum dynamics of enzyme-catalyzed hydrogen atom transfer events
