@@ -260,16 +260,12 @@
   }
   .quicknav-item .title{
     display: inline-block;
-    max-width: 0;
-    overflow: hidden;
     white-space: nowrap;
-    opacity: 0;
-    color: var(--text-primary);
-    transition: max-width 0.2s ease, opacity 0.15s ease;
+    color: var(--text-secondary);
+    transition: color 0.15s ease;
   }
   .quicknav-item:hover .title, .quicknav-item:focus-visible .title{
-    max-width: 140px;
-    opacity: 1;
+    color: var(--text-primary);
   }
 
   @media (max-width: 640px){
